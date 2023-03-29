@@ -1,0 +1,240 @@
+{% extends 'base.html' %}
+{% block head %}
+<style>
+    body{
+      background-color: #3da2c3;
+    }
+    ul{
+     height: 50vh;
+      overflow: auto;
+    }
+    ul::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ul::-webkit-scrollbar-track {
+      background-color: #e4e4e4;
+      border-radius: 100px;
+    }
+    
+    ul::-webkit-scrollbar-thumb {
+      background-color: #e7ae5e;
+      border-radius: 100px;
+    }
+</style>
+
+{% endblock %}
+{% block title%} Todo {%endblock%}
+
+{% block  body%} 
+<nav class="navbar navbar-dark bg-dark">
+  <div class="container justify-content-center">
+  <a class="navbar-brand" href="/">TODO Manager</a>
+
+  </div>
+
+</nav>
+
+<div class="container py-5 h-100">
+  <div class="message"></div>
+
+  <div class="row d-flex justify-content-center align-items-center h-100">
+    <div class="col col-lg-8 col-xl-6">
+      <div class="card rounded-3">
+        <div class="card-body p-4">
+
+          <p class="mb-2"><span class="h2 me-2">Todo list 
+            <form class="row g-3" id="addtaskform" method="POST" action="add/">
+              <div class="col-6 w-50">
+              {% csrf_token %}
+                <input type="search" class="form-control"
+                id="task" name="atask" placeholder="DO Laundary">
+              </div>
+              
+              <div class="col-auto">
+                <button type="submit" class="btn btn-outline-primary mb-3"><i class="bi bi-plus-lg"></i> </button>
+              </div>
+            </form>
+        
+          </p>
+
+          <ul class="list-group  rounded-0">
+            <li class="list-group-item border-0 d-flex align-items-center ps-0">
+              <div class="spinner-grow" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+
+              
+            </li>
+                 </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- parent div -->
+</div>
+
+
+<script >
+
+  function task_delete(id){
+    console.log("i was summoned");
+    console.log(id);
+    $.ajax({
+    method: "POST",
+    url: "/delete/",
+    data: {csrfmiddlewaretoken: "{{csrf_token}}", id:id },
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}",
+      "id":id,
+  }
+
+ 
+  })
+    .done(function( msg ) {
+       if (msg.error == true){
+        $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+          <div id="notification" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body"><i class="bi bi-trash"></i> `+ msg.message +` </div></div></div>`); 
+               $('#notification').show().delay(2000).fadeOut();
+               show_tasks();
+
+      }else{
+            $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+          <div id="notification" class="toast bg-danger text-white"
+          role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body">
+              <i class="bi bi-trash"></i> Deleted successfully </div></div></div>`); 
+                            $('#notification').show().delay(2000).fadeOut();
+        show_tasks();
+              }
+    });
+
+    //function ends
+  }
+  function show_tasks(){
+    $.ajax({
+      url: "list/",
+      type: "POST",
+      data: { csrfmiddlewaretoken: "{{csrf_token}}"}, 
+      dataType: "json",
+      success: function(data) {
+        $("ul").html(" ");
+        for (var i = 0; i < data.length; i++) {
+          var item = data[i];
+          var pk = item.pk;
+          var task = item.fields.task.trim();
+          var status = item.fields.status;
+        
+          if (status == '1'){
+            $("ul").append(`
+            <li  status="${status}" class="list-group-item border-0 d-flex align-items-center ps-0 text-decoration-line-through">
+              <input  class="form-check-input "
+               status="${status}"
+                ims="${pk}-inp" 
+                type="checkbox" 
+                checked 
+                onChange="update(${pk})"
+                 id="${pk}">
+                 <a class="btn  me-3" onclick="task_delete(${pk})"><i class="bi bi-trash"></i></a>
+              ${task}
+             
+            </li>`);      
+          }else{
+            $("ul").append(`
+            <li   status="${status}" class="list-group-item border-0 d-flex align-items-center ps-0">
+              <input  class="form-check-input" status="${status}" ims="${pk}-inp"
+               type="checkbox" onChange="update(${pk})" id="${pk}">
+               <a class="btn  me-3" onclick="task_delete(${pk})"><i class="bi bi-trash"></i></a>
+               ${task} 
+               
+            
+            </li>`);  
+          }
+                         
+        }
+        $('input[status='+1+']').each(function () {
+  
+            $(this).prop("checked","checked")
+              $(`#${$(this).attr("id")}-tsk`).addClass(' del ');
+            });
+      },
+      error: function(xhr, status, error) {
+        console.error(xhr.responseText);
+      }
+      });
+    
+  };
+ show_tasks();
+
+  function update(id){
+    $.ajax({
+      method: "POST",
+      url: "status_update/",
+      data: { csrfmiddlewaretoken: "{{csrf_token}}",id:id }
+    })
+      .done(function( msg ) {
+       if (msg.error == true){
+        $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+          <div id="notification" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body"><i class="bi bi-vector-pen"></i> `+ msg.message +` </div></div></div>`); 
+               $('#notification').show().delay(2000).fadeOut();
+               show_tasks();
+
+          }else{
+            $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+              <div id="notification" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-body"><i class="bi bi-vector-pen"></i> Updated successfully </div></div></div>`); 
+                   $('#notification').show().delay(2000).fadeOut();
+            show_tasks();
+          };
+  });
+};
+
+    $("#addtaskform").submit(function(e){
+        e.preventDefault();
+        var inp =  $("#task").val();
+        $.ajax({
+          method: "POST",
+          url: "add/",
+          cache: false,
+          
+          data: { csrfmiddlewaretoken: "{{csrf_token}}" 
+          ,atask: inp }
+
+        })
+          .done(function( msg ) {
+            show_tasks();
+           if (msg.error == true){
+            $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+              <div id="notification" class="toast bg-danger text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-body">
+                   `+ msg.message +` </div></div></div>`); 
+                   $('#notification').show().delay(2000).fadeOut();
+
+              }else{
+                $('.message').html(`<div class="toast-container bg-position-fixed top-0 end-0 p-3">
+                  <div id="notification" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-body">`+ msg.message+` </div></div></div>`); 
+                       $('#notification').show().delay(2000).fadeOut();
+              };
+          })
+          .fail(function(xhr, status, error) {
+            show_tasks();
+            $('.message').html(`
+              <div class="toast-container bg-position-fixed top-0 end-0 p-3">
+                <div id="notification" class="toast bg-success text-white" role="alert" aria-live="assertive" aria-atomic="true">
+                  <div class="toast-body">
+                  Couldn't add a new task
+                </div>
+                </div>
+              </div>`);
+          });
+      
+    });
+
+
+</script>
+{%endblock%}
+
